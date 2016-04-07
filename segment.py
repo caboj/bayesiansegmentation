@@ -2,6 +2,8 @@ import argparse
 import numpy as np
 
 parser = argparse.ArgumentParser(description='segment phonemic data')
+parser.add_argument('-a', metavar='alpha', dest="alpha",type=float,
+                   help='concentration parameter')
 parser.add_argument('-tn', metavar='T', dest="trainN",type=int,
                    help='nr of line to train with')
 
@@ -9,6 +11,7 @@ parser.add_argument('-tn', metavar='T', dest="trainN",type=int,
 trainD = []       # train data
 p0 = {}           # { char : probability of char }
 n = 0             # number of utterances in train data
+a = 0             # alpha, concentration parameter
 
 def load_data():
     f = open('data/br-phono-train.txt','r')
@@ -54,21 +57,37 @@ def define_p0():
         p0[c] = float(p0[c])/totalCs
 
 
-# tokens per type
+# counts by crp
 def count_words(boundries):
     counts = {}
+    nwrds = 0
     for i in range(n):
         b0 = 0
         for b in boundries[i]:
             w = ''.join(trainD[i][b0:b])
-            if w in counts:
-                counts[w] += 1
+            nwrds += 1
+            if w not in counts:
+                counts[w] = [1]
             else:
-                counts[w] = 1
+                if dec_w_novel(nwrds):
+                    w_cnts = counts[w]
+                    w_cnts.append(1)
+                    counts[w] = w_cnts
+                else:
+                    counts[w][-1] += 1
             b0=b
+    for w in counts:
+        #if len(counts[w]) > 1:
+        print w, counts[w]
+
+def dec_w_novel(nwrds):
+    p_novel = a/(nwrds+a)
+    p_not_novel = nwrds/(nwrds+a)
+    return (p_novel >= p_not_novel)
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
     n = args.trainN
+    a = args.alpha
     load_data()
