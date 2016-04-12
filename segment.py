@@ -38,7 +38,7 @@ def load_data():
             n = len(trainD)
         else:
             data = np.array([np.array( (f.readline().strip()).split(' ') ) for i in range(n)])
-    trainD = np.array([np.array(list((' '.join(s)).replace(" ", ""))) for s in data])
+    trainD = np.array([np.array(list(''.join(s))) for s in data])
 
     n_uf = n
     # initialize boundries between words
@@ -137,7 +137,10 @@ def precision(boundD):
     return p/n
 
 def recall(boundD):
-    True
+    r = 0
+    for b, d in zip(boundD, data):
+        r += sum(np.in1d(b, d)) / float(len(b))
+    return r/n
 
 def f_measure(boundD):
     True
