@@ -34,20 +34,21 @@ def load_data():
 
     with open('data/br-phono-train.txt', 'rU') as f:
         if not n:
-            data = np.array([np.array( (i.strip()).split(' ') ) for i in f.readlines()])
+            data = np.array([np.array( (i.strip()).split(' ') ) for i in f.readline()])
             n = len(trainD)
+            print('len data: ', n)
         else:
             data = np.array([np.array( (f.readline().strip()).split(' ') ) for i in range(n)])
     trainD = np.array([np.array(list(''.join(s))) for s in data])
 
     n_uf = n
     # initialize boundries between words
-    bounds = [[] for i in range(n)]
+    bounds = [[len(data[i])] for i in range(len(data))]
     for i in range(n):
         l = len(trainD[i])
         if l > 2:
             nrBs = int(l/3)+1
-            bounds[i] = np.append(np.sort(np.random.choice(np.arange(1,l),replace=False,size=(nrBs))),l)
+            np.append(bounds[i], np.sort(np.random.choice(np.arange(1,l),replace=False,size=(nrBs))))
 
     define_voc()
     define_trainC()
@@ -86,7 +87,7 @@ def apply_bounds(bounds):
     boundD = []
     for b, s in zip(bounds, trainD):
         boundD.append([''.join(w) for w in np.array_split(s, b[:-1])])
-    print(boundD)
+    #print(boundD)
     return boundD
 
 '''
@@ -150,21 +151,45 @@ def gibbs(bounds):
     global save
     for e in range(epochs):
         print('epoch', e)
+        utI = 0
+        
         for ut,bndrs in zip(trainD,bounds):
+            #bndrs = bndrs.tolist()
             b0 = 0
-            for b in bndrs:
-                final = b==len(ut)
-                w1 = ''.join(ut[b0:b])
-                p_h1 = prob_h1(w1,final)
-                print(p_h1)
-                for bj in range(b0,b):
-                    w2 = ''.join(ut[b0:bj])
-                    w3 = ''.join(ut[bj:b])
+            b_end = bndrs[0]
+            b_idx = 0
+            for i in range(1,len(ut)-1):
+                final = i==len(ut)
+                if i == b_end:
+                    b_idx = bndrs.index(i)
+                    b = b_end
+                    b_end = b_idx+1
+                    w1 = ''.join(ut[b0:b_end])
+                    w2 = ''.join(ut[b0:b])
+                    w3 = ''.join(ut[b:b_end])
+                    p_h1 = prob_h1(w1,final)
                     p_h2 = prob_h2(w2,w3,final)
-                    print(p_h2)
-                    #if p_h2 > p_h1:
-                       #print('\t new boundary ')
-    
+                    if p_h1 > p_h2:
+                        bndrs = bndrs[:b_idx-1]+bndrs[b_idx+1:]
+                        #b_idx = b_idx -1 
+                        #if b_idx-1 < 0:
+                        #    b_idx = 0
+                        #b0 = bndrs[b_idx]
+                    else:
+                        b0 = b
+                else:
+                    w1 = ''.join(ut[b0:b_end])
+                    p_h1 = prob_h1(w1,final)
+                    for bj in range(b0,b_end-1):
+                        w2 = ''.join(ut[b0:bj])
+                        w3 = ''.join(ut[bj:b_end])
+                        p_h2 = prob_h2(w2,w3,final)
+                        #print(p_h2)
+                        if p_h2 > p_h1:
+                            bndrs.insert(b_idx,bj)
+                            b0 = bj
+                            break
+                 
     boundD = apply_bounds(bounds)
     if save:
         output = [' '.join(s) for s in boundD]
