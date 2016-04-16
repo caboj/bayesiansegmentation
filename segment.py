@@ -43,13 +43,25 @@ def load_data():
 
     n_uf = n
     # initialize boundries between words
-    bounds = [[len(data[i])] for i in range(len(data))]
+    bounds = [[len(trainD[i])] for i in range(len(trainD))]
+
     for i in range(n):
         l = len(trainD[i])
         if l > 2:
-            nrBs = int(l/3)+1
-            np.append(bounds[i], np.sort(np.random.choice(np.arange(1,l),replace=False,size=(nrBs))))
+            nrBs = int(l/4)+1
+            bounds[i] = np.append( np.sort(np.random.choice(np.arange(1,l),replace=False,size=(nrBs))),bounds[i]).tolist()
 
+    '''
+    boundries = [{} for i in range(n)]
+    for uti in range(n):
+        utBounds = {}
+        for b in range(1,len(trainD[uti])):
+            if b in bounds[uti]:
+                utBounds[b] = True
+            else:
+                utBounds[b] = False
+        boundries[uti] = utBounds
+    '''    
     define_voc()
     define_trainC()
     define_p0()
@@ -90,14 +102,8 @@ def apply_bounds(bounds):
     #print(boundD)
     return boundD
 
-'''
-def dec_w_novel(nwrds):
-    p_novel = a/(nwrds+a)
-    p_not_novel = nwrds/(nwrds+a)
-    return (p_novel >= p_not_novel)
-'''
-
-def prob_h1(word,final):
+def prob_h1(word,final,new):
+    tot_words = cur_tot_words - 1 if new else cur_tot_words - 2
     nw1 = max(counts[word]-1, 0)
 
     p0_w = 1
@@ -106,10 +112,11 @@ def prob_h1(word,final):
 
     #return ((nw1+ a*p0_w)/(cur_tot_words -1 + a)) 
 
-    nu = n if final else cur_tot_words-2
-    return ((nw1+ a*p0_w)/(cur_tot_words -1 + a)) * ((nu + (rho/2))/(cur_tot_words-rho))
+    nu = n if final else tot_words-n
+    return ((nw1+ a*p0_w)/(tot_words + a)) * ((nu + (rho/2))/(tot_words+rho))
 
-def prob_h2(word2,word3,final):
+def prob_h2(word2,word3,final,new):
+    tot_words = cur_tot_words - 1 if new else cur_tot_words - 2
     nw2 = max(counts[word2]-1, 0)
     nw3 = max(counts[word3]-1, 0)
 
@@ -124,10 +131,11 @@ def prob_h2(word2,word3,final):
     #return ((nw2+ a*p0_w2)/(cur_tot_words-1 + a)) * ((nw3+ a*p0_w3)/(cur_tot_words-1 + a))
     
     iw = int(word2==word3)
-    iu = int(np.invert(final)) #w2 and w3 can't both be utterance-final
-    nu = n if final else cur_tot_words-2
-    f1 = ((nw2+ a*p0_w2)/(cur_tot_words-1 + a)) * ((cur_tot_words-n+ (rho/2))/ (cur_tot_words+rho))
-    f2 = ((nw3+iw+ a*p0_w3)/(cur_tot_words + a)) * ((nu+iu+ (rho/2))/ (cur_tot_words+rho))
+    #iu = int(np.invert(final)) #w2 and w3 can't both be utterance-final
+    nu = n if final else tot_words - n
+    min1 = 1 if final else 0
+    f1 = ((nw2+a*p0_w2)/(tot_words + a)) * ((tot_words-n-min1+ (rho/2))/ (tot_words+rho))
+    f2 = ((nw3+iw+a*p0_w3)/(tot_words + a)) * ((nu+iu+ (rho/2))/ (tot_words+rho))
     return f1*f2 
     
 
@@ -147,49 +155,56 @@ def f_measure(boundD):
     True
 
 
+def test_h1_gr_h2(b0,cur_b,end_b,ut):
+    final = end_b==len(ut)
+    w1 = ''.join(ut[b0:end_b])
+    w2 = ''.join(ut[b0:cur_b])
+    w3 = ''.join(ut[cur_b:end_b])
+    p_h1 = prob_h1(w1,final)
+    p_h2 = prob_h2(w2,w3,final)
+
+    print('compare: ',w1,w2,w3)
+    return p_h1 > p_h2
+
 def gibbs(bounds):
     global save
+    
     for e in range(epochs):
         print('epoch', e)
         utI = 0
         
-        for ut,bndrs in zip(trainD,bounds):
+        for ni in range(n):
             #bndrs = bndrs.tolist()
+            existing_b = False
+            ut = trainD[ni]
+            print(ut)
+            bndrs = bounds[ni]
+            print(bndrs)
             b0 = 0
-            b_end = bndrs[0]
-            b_idx = 0
-            for i in range(1,len(ut)-1):
-                final = i==len(ut)
-                if i == b_end:
-                    b_idx = bndrs.index(i)
-                    b = b_end
-                    b_end = b_idx+1
-                    w1 = ''.join(ut[b0:b_end])
-                    w2 = ''.join(ut[b0:b])
-                    w3 = ''.join(ut[b:b_end])
-                    p_h1 = prob_h1(w1,final)
-                    p_h2 = prob_h2(w2,w3,final)
-                    if p_h1 > p_h2:
-                        bndrs = bndrs[:b_idx-1]+bndrs[b_idx+1:]
-                        #b_idx = b_idx -1 
-                        #if b_idx-1 < 0:
-                        #    b_idx = 0
-                        #b0 = bndrs[b_idx]
+            end_b = bndrs[0]
+            end_b_idx = 0
+            for cur_b in range(1,len(ut)-1):
+                if cur_b == end_b:
+                    end_b_idx += 1
+                    end_b = bndrs[end_b_idx]
+                    h1 = test_h1_gr_h2(b0,cur_b,end_b,ut)
+                    if h1:
+                        end_b_idx -= 1
+                        print('remove b, b_idx: ',cur_b,end_b_idx-1)
+                        bndrs = bndrs[:end_b_idx]+bndrs[end_b_idx+1:]
                     else:
-                        b0 = b
+                        b0 = bndrs[end_b_idx]
+
                 else:
-                    w1 = ''.join(ut[b0:b_end])
-                    p_h1 = prob_h1(w1,final)
-                    for bj in range(b0,b_end-1):
-                        w2 = ''.join(ut[b0:bj])
-                        w3 = ''.join(ut[bj:b_end])
-                        p_h2 = prob_h2(w2,w3,final)
-                        #print(p_h2)
-                        if p_h2 > p_h1:
-                            bndrs.insert(b_idx,bj)
-                            b0 = bj
-                            break
-                 
+                    h1 = test_h1_gr_h2(b0,cur_b,end_b,ut)
+                    if not h1:
+                        print('insert b, b_idx: ', cur_b,end_b_idx)
+                        bndrs.insert(end_b_idx,cur_b)
+                        b0 = cur_b
+                             
+            bounds[ni] = bndrs
+
+                
     boundD = apply_bounds(bounds)
     if save:
         output = [' '.join(s) for s in boundD]
