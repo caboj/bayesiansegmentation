@@ -32,14 +32,16 @@ def load_data():
     global trainD
     global n
 
+    data = []
     with open('data/br-phono-train.txt', 'rU') as f:
         if not n:
-            data = np.array([np.array( (i.strip()).split(' ') ) for i in f.readline()])
-            n = len(trainD)
-            print('len data: ', n)
+            for l in f:
+                data.append((l.strip()).split(' '))
         else:
             data = np.array([np.array( (f.readline().strip()).split(' ') ) for i in range(n)])
     trainD = np.array([np.array(list(''.join(s))) for s in data])
+    n = len(trainD)
+    print('len data: ', n)
 
     n_uf = n
     # initialize boundries between words
@@ -51,17 +53,6 @@ def load_data():
             nrBs = int(l/4)+1
             bounds[i] = np.append( np.sort(np.random.choice(np.arange(1,l),replace=False,size=(nrBs))),bounds[i]).tolist()
 
-    '''
-    boundries = [{} for i in range(n)]
-    for uti in range(n):
-        utBounds = {}
-        for b in range(1,len(trainD[uti])):
-            if b in bounds[uti]:
-                utBounds[b] = True
-            else:
-                utBounds[b] = False
-        boundries[uti] = utBounds
-    '''    
     define_voc()
     define_trainC()
     define_p0()
