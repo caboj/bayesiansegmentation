@@ -242,7 +242,7 @@ def gibbs(bounds):
                         update_counts_remove(ut, end_b_idx, bndrs)
                         bndrs = bndrs[:end_b_idx]+bndrs[end_b_idx+1:]
                     else:
-                        b0 = bndrs[end_b_idx]
+                        b0 = bndrs[end_b_idx-1]
 
                 else:
                     h1 = test_h1_gr_h2(b0,cur_b,end_b,ut,True)
@@ -250,6 +250,7 @@ def gibbs(bounds):
                         #print('insert b, b_idx: ', cur_b,end_b_idx)
                         update_counts_add(ut, end_b_idx, cur_b, bndrs)
                         bndrs.insert(end_b_idx,cur_b)
+                        end_b_idx += 1
                         b0 = cur_b
             bounds[ni] = bndrs
 
