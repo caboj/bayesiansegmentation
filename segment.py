@@ -135,8 +135,8 @@ def prob_h2(word2,word3,final,new):
     nu = n if final else tot_words - n
     min1 = 1 if final else 0
     f1 = ((nw2+a*p0_w2)/(tot_words + a)) * ((tot_words-n-min1+ (rho/2))/ (tot_words+rho))
-    f2 = ((nw3+iw+a*p0_w3)/(tot_words + a)) * ((nu+iu+ (rho/2))/ (tot_words+rho))
-    return f1*f2 
+    f2 = ((nw3+iw+a*p0_w3)/(tot_words + a)) * ((nu+ (rho/2))/ (tot_words+rho))
+    return f1*f2
     
 
 def precision(boundD):
@@ -155,15 +155,15 @@ def f_measure(boundD):
     True
 
 
-def test_h1_gr_h2(b0,cur_b,end_b,ut):
+def test_h1_gr_h2(b0,cur_b,end_b,ut,new):
     final = end_b==len(ut)
     w1 = ''.join(ut[b0:end_b])
     w2 = ''.join(ut[b0:cur_b])
     w3 = ''.join(ut[cur_b:end_b])
-    p_h1 = prob_h1(w1,final)
-    p_h2 = prob_h2(w2,w3,final)
+    p_h1 = prob_h1(w1,final,new)
+    p_h2 = prob_h2(w2,w3,final,new)
 
-    print('compare: ',w1,w2,w3)
+    #print('compare: ',w1,w2,w3)
     return p_h1 > p_h2
 
 def gibbs(bounds):
@@ -187,16 +187,16 @@ def gibbs(bounds):
                 if cur_b == end_b:
                     end_b_idx += 1
                     end_b = bndrs[end_b_idx]
-                    h1 = test_h1_gr_h2(b0,cur_b,end_b,ut)
+                    h1 = test_h1_gr_h2(b0,cur_b,end_b,ut,False)
                     if h1:
                         end_b_idx -= 1
-                        print('remove b, b_idx: ',cur_b,end_b_idx-1)
+                        print('remove b, b_idx: ',cur_b,end_b_idx)
                         bndrs = bndrs[:end_b_idx]+bndrs[end_b_idx+1:]
                     else:
                         b0 = bndrs[end_b_idx]
 
                 else:
-                    h1 = test_h1_gr_h2(b0,cur_b,end_b,ut)
+                    h1 = test_h1_gr_h2(b0,cur_b,end_b,ut,True)
                     if not h1:
                         print('insert b, b_idx: ', cur_b,end_b_idx)
                         bndrs.insert(end_b_idx,cur_b)
