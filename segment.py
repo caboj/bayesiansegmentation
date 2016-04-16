@@ -166,6 +166,48 @@ def test_h1_gr_h2(b0,cur_b,end_b,ut,new):
     #print('compare: ',w1,w2,w3)
     return p_h1 > p_h2
 
+
+def update_counts_remove(ut, b_idx, bndrs):
+    b0 = 0
+    if b_idx>0:
+        b0 = bndrs[b_idx-1]
+    bn = len(ut)-1
+    if b_idx<len(bndrs)-1:
+        bn = bndrs[b_idx+1]
+    bi = bndrs[b_idx]
+    
+    w = np.array_split(ut, [b0, bi, bn])
+    w2 = ''.join(w[1])
+    w3 = ''.join(w[2])
+    w1 = w2+w3
+    
+    global counts
+    #decrease
+    counts[w2] = counts[w2]-1
+    counts[w3] = counts[w3]-1
+    #increase
+    counts[w1] = counts[w1]+1
+
+def update_counts_add(ut, b_idx, bi, bndrs):
+    b0 = 0
+    if b_idx>0:
+        b0 = bndrs[b_idx-1]
+    bn = len(ut)-1
+    if b_idx<len(bndrs)-1:
+        bn = bndrs[b_idx]
+
+    w = np.array_split(ut, [b0, bi, bn])
+    w2 = ''.join(w[1])
+    w3 = ''.join(w[2])
+    w1 = w2+w3
+
+    global counts
+    #increase
+    counts[w2] = counts[w2]+1
+    counts[w3] = counts[w3]+1
+    #decrease
+    counts[w1] = counts[w1]-1
+
 def gibbs(bounds):
     global save
     
@@ -191,6 +233,7 @@ def gibbs(bounds):
                     if h1:
                         end_b_idx -= 1
                         print('remove b, b_idx: ',cur_b,end_b_idx)
+                        update_counts_remove(ut, end_b_idx, bndrs)
                         bndrs = bndrs[:end_b_idx]+bndrs[end_b_idx+1:]
                     else:
                         b0 = bndrs[end_b_idx]
@@ -199,9 +242,9 @@ def gibbs(bounds):
                     h1 = test_h1_gr_h2(b0,cur_b,end_b,ut,True)
                     if not h1:
                         print('insert b, b_idx: ', cur_b,end_b_idx)
+                        update_counts_add(ut, end_b_idx, cur_b, bndrs)
                         bndrs.insert(end_b_idx,cur_b)
                         b0 = cur_b
-                             
             bounds[ni] = bndrs
 
                 
