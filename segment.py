@@ -32,14 +32,16 @@ def load_data():
     global trainD
     global n
 
+    data = []
     with open('data/br-phono-train.txt', 'rU') as f:
         if not n:
-            data = np.array([np.array( (i.strip()).split(' ') ) for i in f.readline()])
-            n = len(trainD)
-            print('len data: ', n)
+            for l in f:
+                data.append((l.strip()).split(' '))
         else:
             data = np.array([np.array( (f.readline().strip()).split(' ') ) for i in range(n)])
     trainD = np.array([np.array(list(''.join(s))) for s in data])
+    n = len(trainD)
+    print('len data: ', n)
 
     n_uf = n
     # initialize boundries between words
@@ -51,17 +53,6 @@ def load_data():
             nrBs = int(l/4)+1
             bounds[i] = np.append( np.sort(np.random.choice(np.arange(1,l),replace=False,size=(nrBs))),bounds[i]).tolist()
 
-    '''
-    boundries = [{} for i in range(n)]
-    for uti in range(n):
-        utBounds = {}
-        for b in range(1,len(trainD[uti])):
-            if b in bounds[uti]:
-                utBounds[b] = True
-            else:
-                utBounds[b] = False
-        boundries[uti] = utBounds
-    '''    
     define_voc()
     define_trainC()
     define_p0()
@@ -219,9 +210,9 @@ def gibbs(bounds):
             #bndrs = bndrs.tolist()
             existing_b = False
             ut = trainD[ni]
-            print(ut)
+            #print(ut)
             bndrs = bounds[ni]
-            print(bndrs)
+            #print(bndrs)
             b0 = 0
             end_b = bndrs[0]
             end_b_idx = 0
@@ -232,7 +223,7 @@ def gibbs(bounds):
                     h1 = test_h1_gr_h2(b0,cur_b,end_b,ut,False)
                     if h1:
                         end_b_idx -= 1
-                        print('remove b, b_idx: ',cur_b,end_b_idx)
+                        #print('remove b, b_idx: ',cur_b,end_b_idx)
                         update_counts_remove(ut, end_b_idx, bndrs)
                         bndrs = bndrs[:end_b_idx]+bndrs[end_b_idx+1:]
                     else:
@@ -241,7 +232,7 @@ def gibbs(bounds):
                 else:
                     h1 = test_h1_gr_h2(b0,cur_b,end_b,ut,True)
                     if not h1:
-                        print('insert b, b_idx: ', cur_b,end_b_idx)
+                        #print('insert b, b_idx: ', cur_b,end_b_idx)
                         update_counts_add(ut, end_b_idx, cur_b, bndrs)
                         bndrs.insert(end_b_idx,cur_b)
                         b0 = cur_b
