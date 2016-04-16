@@ -122,11 +122,11 @@ def prob_h2(word2,word3,final,new):
     #return ((nw2+ a*p0_w2)/(cur_tot_words-1 + a)) * ((nw3+ a*p0_w3)/(cur_tot_words-1 + a))
     
     iw = int(word2==word3)
-    #iu = int(np.invert(final)) #w2 and w3 can't both be utterance-final
+    iu = int(np.invert(final)) #w2 and w3 can't both be utterance-final
     nu = n if final else tot_words - n
     min1 = 1 if final else 0
     f1 = ((nw2+a*p0_w2)/(tot_words + a)) * ((tot_words-n-min1+ (rho/2))/ (tot_words+rho))
-    f2 = ((nw3+iw+a*p0_w3)/(tot_words + a)) * ((nu+ (rho/2))/ (tot_words+rho))
+    f2 = ((nw3+iw+a*p0_w3)/(tot_words + a)) * ((nu+iu+(rho/2))/ (tot_words+rho))
     return f1*f2
     
 
