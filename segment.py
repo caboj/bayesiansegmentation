@@ -139,20 +139,35 @@ def prob_h2(word2,word3,final,new):
     return f1*f2
     
 
+def extract_bounds(ut):
+    lengths = [len(w) for w in ut]
+    bounds = [sum(lengths[0:i+1]) for i in range(len(lengths))]
+    return bounds
+
 def precision(boundD):
-    p = 0
-    for b, d in zip(boundD, data):
-        p += sum(np.in1d(b, d)) / float(len(d))
-    return p/n
+    p = np.array([])
+    for b, ut in zip(boundD, data):
+        utb = extract_bounds(ut)
+        print(utb)
+        print(b)
+        print('')
+        pb = sum(np.in1d(b, utb)) / float(len(utb))
+        p = np.append(p, pb)
+    return p
 
 def recall(boundD):
-    r = 0
-    for b, d in zip(boundD, data):
-        r += sum(np.in1d(b, d)) / float(len(b))
-    return r/n
+    r = np.array([])
+    for b, ut in zip(boundD, data):
+        utb = extract_bounds(ut)
+        rb = sum(np.in1d(b, utb)) / float(len(b))
+        r = np.append(r, rb)
+    return r
 
-def f_measure(boundD):
-    True
+def f_measure(p, r):
+    sum_pr = p+r
+    sum_pr[sum_pr==0]=1
+    fm = 2*((p*r)/sum_pr)
+    return sum(fm)/n
 
 
 def test_h1_gr_h2(b0,cur_b,end_b,ut,new):
@@ -219,9 +234,9 @@ def gibbs(bounds):
             #bndrs = bndrs.tolist()
             existing_b = False
             ut = trainD[ni]
-            print(ut)
+            #print(ut)
             bndrs = bounds[ni]
-            print(bndrs)
+            #print(bndrs)
             b0 = 0
             end_b = bndrs[0]
             end_b_idx = 0
@@ -232,7 +247,7 @@ def gibbs(bounds):
                     h1 = test_h1_gr_h2(b0,cur_b,end_b,ut,False)
                     if h1:
                         end_b_idx -= 1
-                        print('remove b, b_idx: ',cur_b,end_b_idx)
+                        #print('remove b, b_idx: ',cur_b,end_b_idx)
                         update_counts_remove(ut, end_b_idx, bndrs)
                         bndrs = bndrs[:end_b_idx]+bndrs[end_b_idx+1:]
                     else:
@@ -241,7 +256,7 @@ def gibbs(bounds):
                 else:
                     h1 = test_h1_gr_h2(b0,cur_b,end_b,ut,True)
                     if not h1:
-                        print('insert b, b_idx: ', cur_b,end_b_idx)
+                        #print('insert b, b_idx: ', cur_b,end_b_idx)
                         update_counts_add(ut, end_b_idx, cur_b, bndrs)
                         bndrs.insert(end_b_idx,cur_b)
                         b0 = cur_b
@@ -255,11 +270,13 @@ def gibbs(bounds):
             out.write('\n'.join(output))
 
     # precision
-    print('Precision:', precision(boundD))
+    p = precision(bounds)
+    print('Precision:', sum(p)/n)
     # recall 
-    print('Recall:', recall(boundD))
+    r = recall(bounds)
+    print('Recall:', sum(r)/n)
     # f-measure
-    print('F-Measure:', f_measure(boundD))
+    print('F-Measure:', f_measure(p,r))
 
 if __name__ == "__main__":
     args = parser.parse_args()
