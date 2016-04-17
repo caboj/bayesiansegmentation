@@ -129,36 +129,39 @@ def prob_h2(word2,word3,final,new):
     return f1*f2
     
 
-def extract_bounds(ut):
-    lengths = [len(w) for w in ut]
-    bounds = [sum(lengths[0:i+1]) for i in range(len(lengths))]
+def extract_bounds():
+    bounds = []
+    for ut in data:
+        lengths = [len(w) for w in ut]
+        bounds.append([sum(lengths[0:i+1]) for i in range(len(lengths))])
     return bounds
 
-def precision(boundD):
+def precision(foundB, dataB):
     p = np.array([])
-    for b, ut in zip(boundD, data):
-        utb = extract_bounds(ut)
-        #print(utb)
-        #print(b)
-        #print('')
-        pb = sum(np.in1d(b, utb)) / float(len(utb))
+    for b, utb in zip(foundB, dataB):
+        denom = max(float(len(b)), 1.0)
+        pb = sum(np.in1d(b, utb)) / denom
         p = np.append(p, pb)
     return p
 
-def recall(boundD):
+def recall(foundB, dataB):
     r = np.array([])
-    for b, ut in zip(boundD, data):
-        utb = extract_bounds(ut)
-        rb = sum(np.in1d(b, utb)) / float(len(b))
+    for b, utb in zip(foundB, dataB):
+        #print(b)
+        #print(utb)
+        #print(np.in1d(b, utb))
+        denom = max(float(len(utb)), 1.0)
+        rb = sum(np.in1d(b, utb)) / denom
+        #print(rb)
+        #print('')
         r = np.append(r, rb)
     return r
 
 def f_measure(p, r):
     sum_pr = p+r
     sum_pr[sum_pr==0]=1
-    fm = 2*((p*r)/sum_pr)
-    return sum(fm)/n
-
+    f = 2*((p*r)/sum_pr)
+    return f
 
 def test_h1_gr_h2(b0,cur_b,end_b,ut,new):
     final = end_b==len(ut)
@@ -171,7 +174,6 @@ def test_h1_gr_h2(b0,cur_b,end_b,ut,new):
 
     #print('w1: ',w1,'w2: ', w2, 'w3: ',w3)
     return p_h1 > p_h2
-
 
 def update_counts_remove(ut, b_idx, bndrs):
     b0 = 0
@@ -213,6 +215,63 @@ def update_counts_add(ut, b_idx, bi, bndrs):
     counts[w3] = counts[w3]+1
     #decrease
     counts[w1] = counts[w1]-1
+
+def word_eval_bounds(bounds):
+    wBounds = []
+    for b in bounds:
+        b = np.append([0],b)
+        wbs = ['-'.join(b.astype('str')[i:i+2]) for i in range(len(b)-1)]
+        wBounds.append(wbs)
+    return wBounds
+
+def word_eval_lexicon(utterances):
+    lex = []
+    for ut in utterances:
+        lex.append(list(set(ut)))
+    return lex
+
+def word_eval_ambiguous(bounds):
+    aBounds = []
+    for b in bounds:
+        aBounds.append(b[:-1])
+    return aBounds
+
+def evaluate(bounds, dataB, boundD):
+    boundsW = word_eval_bounds(bounds) 
+    dataBW = word_eval_bounds(dataB)
+    # precision
+    p = precision(boundsW, dataBW)
+    print('P:', sum(p)/n)
+    # recall 
+    r = recall(boundsW, dataBW)
+    print('R:', sum(r)/n)
+    # f-measure
+    f = f_measure(p,r)
+    print('F:', sum(f)/n)
+   
+    dataL = word_eval_lexicon(data)
+    boundDL = word_eval_lexicon(boundD)
+    # precision
+    pl = precision(boundDL, dataL)
+    print('\nLP:', sum(pl)/n)
+    # recall 
+    rl = recall(boundDL, dataL)
+    print('LR:', sum(rl)/n)
+    # f-measure
+    fl = f_measure(pl,rl)
+    print('LF:', sum(fl)/n)
+
+    boundsA = word_eval_ambiguous(bounds)
+    dataBA = word_eval_ambiguous(dataB)
+    # precision
+    pb = precision(boundsA, dataBA)
+    print('\nBP:', sum(pb)/n)
+    # recall 
+    rb = recall(boundsA, dataBA)
+    print('BR:', sum(rb)/n)
+    # f-measure
+    fb = f_measure(pb,rb)
+    print('BF:', sum(fb)/n)
 
 def gibbs(bounds):
     global save
@@ -259,22 +318,17 @@ def gibbs(bounds):
             bounds[ni] = bndrs
         #print('boundaries canged: ', b_changes)
             
-
-                
+    # bounds according to data
+    dataB = extract_bounds()
+    # segmented utterances according to found bounds
     boundD = apply_bounds(bounds)
     if save:
         output = [' '.join(s) for s in boundD]
         with open('output_test','w') as out:
             out.write('\n'.join(output))
 
-    # precision
-    p = precision(bounds)
-    print('Precision:', sum(p)/n)
-    # recall 
-    r = recall(bounds)
-    print('Recall:', sum(r)/n)
-    # f-measure
-    print('F-Measure:', f_measure(p,r))
+    # calculate evaluation metrics
+    evaluate(bounds, dataB, boundD)
 
 if __name__ == "__main__":
     args = parser.parse_args()
