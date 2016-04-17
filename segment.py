@@ -26,7 +26,7 @@ n = 0                       # number of utterances in train data
 a = 0                       # alpha, concentration parameter
 cur_tot_words = 0           # nr of words
 counts = defaultdict(int)   # word counts
-burnin = 0
+burnin = 4900
 
 def load_data():
     global data
@@ -56,17 +56,17 @@ def load_data():
     
     define_voc()
     define_trainC()
-    define_p0()
+    define_p0(False)
     count_words(bounds)
     return bounds
 
-def define_p0():
+def define_p0(relative=False):
     global p0
     p0 = np.zeros(len(voc))
     # a uniform distribution over chars
     p0[:] = 1.0/len(voc)
     # a distribution according to relative frequency
-    #totalCs = len(np.hstack(trainC))
+    totalCs = len(np.hstack(trainC))
 
 def define_trainC():
     global trainC
@@ -174,16 +174,16 @@ def test_h1_gr_h2(b0,cur_b,end_b,ut,new):
     p_h2 = prob_h2(w2,w3,final,new)
 
     #print('w1: ',w1,'w2: ', w2, 'w3: ',w3)
-    r = np.random.uniform(0,1)
-    if p_h1 > p_h2 and r < p_h2/p_h1:
-        return True
-    else:
-        return False
-    if p_h1 < p_h2 and r < p_h1/p_h2:
-        return False
-    else:
-        return True
 
+    r = np.random.uniform(0,1)
+
+    pd = [False for i in range(100)]
+    pct_h1 = (p_h1*100)/(p_h1+p_h2)
+    for i in range(int(pct_h1)):
+        pd[i] = True
+        
+    print(pd)
+    return np.random.choice(pd)
 
 def update_counts_remove(ut, b_idx, bndrs):
     b0 = 0
