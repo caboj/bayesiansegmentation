@@ -26,6 +26,7 @@ n = 0                       # number of utterances in train data
 a = 0                       # alpha, concentration parameter
 cur_tot_words = 0           # nr of words
 counts = defaultdict(int)   # word counts
+burnin = 0
 
 def load_data():
     global data
@@ -308,7 +309,7 @@ def gibbs(bounds):
                         b_changes += 1
                         #print('remove b, b_idx: ',cur_b,end_b_idx)
                         update_counts_remove(ut, end_b_idx-1, bndrs)
-                        if e > 1000:
+                        if e > burnin:
                             end_b_idx -= 1
                             bndrs = bndrs[:end_b_idx]+bndrs[end_b_idx+1:]
                     else:
@@ -320,13 +321,12 @@ def gibbs(bounds):
                         b_changes += 1
                         #print('insert b, b_idx: ', cur_b,end_b_idx)
                         update_counts_add(ut, end_b_idx, cur_b, bndrs)
-                        if e > 1000:
+                        if e > burnin:
                             bndrs.insert(end_b_idx,cur_b)
                             end_b_idx += 1
                         b0 = cur_b
             bounds[ni] = bndrs
-        #print('boundaries canged: ', b_changes)
-            
+        print('\t\tboundaries canged: ', b_changes,end='\r')
     # bounds according to data
     dataB = extract_bounds()
     # segmented utterances according to found bounds
