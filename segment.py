@@ -173,7 +173,16 @@ def test_h1_gr_h2(b0,cur_b,end_b,ut,new):
     p_h2 = prob_h2(w2,w3,final,new)
 
     #print('w1: ',w1,'w2: ', w2, 'w3: ',w3)
-    return p_h1 > p_h2
+    r = np.random.uniform(0,1)
+    if p_h1 > p_h2 and r < p_h2/p_h1:
+        return True
+    else:
+        return False
+    if p_h1 < p_h2 and r < p_h1/p_h2:
+        return False
+    else:
+        return True
+
 
 def update_counts_remove(ut, b_idx, bndrs):
     b0 = 0
