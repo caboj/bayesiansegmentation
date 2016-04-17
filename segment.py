@@ -26,7 +26,7 @@ n = 0                       # number of utterances in train data
 a = 0                       # alpha, concentration parameter
 cur_tot_words = 0           # nr of words
 counts = defaultdict(int)   # word counts
-burnin = 4900
+burnin = 1000
 
 def load_data():
     global data
@@ -182,7 +182,7 @@ def test_h1_gr_h2(b0,cur_b,end_b,ut,new):
     for i in range(int(pct_h1)):
         pd[i] = True
         
-    print(pd)
+    #print(pd)
     return np.random.choice(pd)
 
 def update_counts_remove(ut, b_idx, bndrs):
@@ -206,6 +206,9 @@ def update_counts_remove(ut, b_idx, bndrs):
     #increase
     counts[w1] = counts[w1]+1
 
+    global cur_tot_words
+    cur_tot_words -= 1
+    
 def update_counts_add(ut, b_idx, bi, bndrs):
     b0 = 0
     if b_idx>0:
@@ -226,6 +229,8 @@ def update_counts_add(ut, b_idx, bi, bndrs):
     #decrease
     counts[w1] = counts[w1]-1
 
+    global cur_tot_words
+    cur_tot_words += 1
 def word_eval_bounds(bounds):
     wBounds = []
     for b in bounds:
@@ -268,7 +273,8 @@ def evaluate(bounds, dataB, boundD):
     rl = recall(boundDL, dataL)
     print('LR:', sum(rl)/n)
     # f-measure
-    fl = f_measure(pl,rl)
+    fl = f_measure(pl,rl)    
+
     print('LF:', sum(fl)/n)
 
     boundsA = word_eval_ambiguous(bounds)
