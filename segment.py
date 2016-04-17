@@ -46,13 +46,13 @@ def load_data():
     n_uf = n
     # initialize boundries between words
     bounds = [[len(trainD[i])] for i in range(len(trainD))]
-
+    #bounds = [[i for i in range(1,len(ut))] for ut in trainD]
     for i in range(n):
         l = len(trainD[i])
         if l > 2:
             nrBs = int(l/4)+1
             bounds[i] = np.append( np.sort(np.random.choice(np.arange(1,l),replace=False,size=(nrBs))),bounds[i]).tolist()
-
+    
     define_voc()
     define_trainC()
     define_p0()
@@ -129,39 +129,35 @@ def prob_h2(word2,word3,final,new):
     return f1*f2
     
 
-def extract_bounds():
-    bounds = []
-    for ut in data:
-        lengths = [len(w) for w in ut]
-        bounds.append([sum(lengths[0:i+1]) for i in range(len(lengths))])
+def extract_bounds(ut):
+    lengths = [len(w) for w in ut]
+    bounds = [sum(lengths[0:i+1]) for i in range(len(lengths))]
     return bounds
 
-def precision(foundB, dataB):
+def precision(boundD):
     p = np.array([])
-    for b, utb in zip(foundB, dataB):
-        denom = max(float(len(b)), 1.0)
-        pb = sum(np.in1d(b, utb)) / denom
+    for b, ut in zip(boundD, data):
+        utb = extract_bounds(ut)
+        #print(utb)
+        #print(b)
+        #print('')
+        pb = sum(np.in1d(b, utb)) / float(len(utb))
         p = np.append(p, pb)
     return p
 
-def recall(foundB, dataB):
+def recall(boundD):
     r = np.array([])
-    for b, utb in zip(foundB, dataB):
-        #print(b)
-        #print(utb)
-        #print(np.in1d(b, utb))
-        denom = max(float(len(utb)), 1.0)
-        rb = sum(np.in1d(b, utb)) / denom
-        #print(rb)
-        #print('')
+    for b, ut in zip(boundD, data):
+        utb = extract_bounds(ut)
+        rb = sum(np.in1d(b, utb)) / float(len(b))
         r = np.append(r, rb)
     return r
 
 def f_measure(p, r):
     sum_pr = p+r
     sum_pr[sum_pr==0]=1
-    f = 2*((p*r)/sum_pr)
-    return f
+    fm = 2*((p*r)/sum_pr)
+    return sum(fm)/n
 
 
 def test_h1_gr_h2(b0,cur_b,end_b,ut,new):
@@ -169,10 +165,11 @@ def test_h1_gr_h2(b0,cur_b,end_b,ut,new):
     w1 = ''.join(ut[b0:end_b])
     w2 = ''.join(ut[b0:cur_b])
     w3 = ''.join(ut[cur_b:end_b])
+
     p_h1 = prob_h1(w1,final,new)
     p_h2 = prob_h2(w2,w3,final,new)
 
-    #print('compare: ',w1,w2,w3)
+    #print('w1: ',w1,'w2: ', w2, 'w3: ',w3)
     return p_h1 > p_h2
 
 
@@ -217,68 +214,11 @@ def update_counts_add(ut, b_idx, bi, bndrs):
     #decrease
     counts[w1] = counts[w1]-1
 
-def word_eval_bounds(bounds):
-    wBounds = []
-    for b in bounds:
-        b = np.append([0],b)
-        wbs = ['-'.join(b.astype('str')[i:i+2]) for i in range(len(b)-1)]
-        wBounds.append(wbs)
-    return wBounds
-
-def word_eval_lexicon(utterances):
-    lex = []
-    for ut in utterances:
-        lex.append(list(set(ut)))
-    return lex
-
-def word_eval_ambiguous(bounds):
-    aBounds = []
-    for b in bounds:
-        aBounds.append(b[:-1])
-    return aBounds
-
-def evaluate(bounds, dataB, boundD):
-    boundsW = word_eval_bounds(bounds) 
-    dataBW = word_eval_bounds(dataB)
-    # precision
-    p = precision(boundsW, dataBW)
-    print('P:', sum(p)/n)
-    # recall 
-    r = recall(boundsW, dataBW)
-    print('R:', sum(r)/n)
-    # f-measure
-    f = f_measure(p,r)
-    print('F:', sum(f)/n)
-   
-    dataL = word_eval_lexicon(data)
-    boundDL = word_eval_lexicon(boundD)
-    # precision
-    pl = precision(boundDL, dataL)
-    print('\nLP:', sum(pl)/n)
-    # recall 
-    rl = recall(boundDL, dataL)
-    print('LR:', sum(rl)/n)
-    # f-measure
-    fl = f_measure(pl,rl)
-    print('LF:', sum(fl)/n)
-
-    boundsA = word_eval_ambiguous(bounds)
-    dataBA = word_eval_ambiguous(dataB)
-    # precision
-    pb = precision(boundsA, dataBA)
-    print('\nBP:', sum(pb)/n)
-    # recall 
-    rb = recall(boundsA, dataBA)
-    print('BR:', sum(rb)/n)
-    # f-measure
-    fb = f_measure(pb,rb)
-    print('BF:', sum(fb)/n)
-
 def gibbs(bounds):
     global save
     
     for e in range(epochs):
-        #print('epoch', e, end='\r')
+        print('epoch', e, end='\r')
         utI = 0
         b_changes = 0
         for ni in range(n):
@@ -298,10 +238,11 @@ def gibbs(bounds):
                     h1 = test_h1_gr_h2(b0,cur_b,end_b,ut,False)
                     if h1:
                         b_changes += 1
-                        end_b_idx -= 1
                         #print('remove b, b_idx: ',cur_b,end_b_idx)
-                        update_counts_remove(ut, end_b_idx, bndrs)
-                        bndrs = bndrs[:end_b_idx]+bndrs[end_b_idx+1:]
+                        update_counts_remove(ut, end_b_idx-1, bndrs)
+                        if e > 1000:
+                            end_b_idx -= 1
+                            bndrs = bndrs[:end_b_idx]+bndrs[end_b_idx+1:]
                     else:
                         b0 = bndrs[end_b_idx-1]
 
@@ -311,23 +252,29 @@ def gibbs(bounds):
                         b_changes += 1
                         #print('insert b, b_idx: ', cur_b,end_b_idx)
                         update_counts_add(ut, end_b_idx, cur_b, bndrs)
-                        bndrs.insert(end_b_idx,cur_b)
-                        end_b_idx += 1
+                        if e > 1000:
+                            bndrs.insert(end_b_idx,cur_b)
+                            end_b_idx += 1
                         b0 = cur_b
             bounds[ni] = bndrs
-        print('boundaries changed: ', b_changes)
+        #print('boundaries canged: ', b_changes)
             
-    # bounds according to data
-    dataB = extract_bounds()
-    # segmented utterances according to found bounds
+
+                
     boundD = apply_bounds(bounds)
     if save:
         output = [' '.join(s) for s in boundD]
         with open('output_test','w') as out:
             out.write('\n'.join(output))
 
-    # calculate evaluation metrics
-    evaluate(bounds, dataB, boundD)
+    # precision
+    p = precision(bounds)
+    print('Precision:', sum(p)/n)
+    # recall 
+    r = recall(bounds)
+    print('Recall:', sum(r)/n)
+    # f-measure
+    print('F-Measure:', f_measure(p,r))
 
 if __name__ == "__main__":
     args = parser.parse_args()
