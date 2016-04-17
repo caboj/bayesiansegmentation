@@ -26,7 +26,7 @@ n = 0                       # number of utterances in train data
 a = 0                       # alpha, concentration parameter
 cur_tot_words = 0           # nr of words
 counts = defaultdict(int)   # word counts
-burnin = 1000
+burnin = 300
 
 def load_data():
     global data
@@ -34,7 +34,7 @@ def load_data():
     global n
 
     data = []
-    with open('data/br-phono-train.txt', 'rU') as f:
+    with open('data/br-phono.txt', 'rU') as f:
         if not n:
             for l in f:
                 data.append((l.strip()).split(' '))
@@ -178,7 +178,8 @@ def test_h1_gr_h2(b0,cur_b,end_b,ut,new):
     r = np.random.uniform(0,1)
 
     pd = [False for i in range(100)]
-    pct_h1 = (p_h1*100)/(p_h1+p_h2)
+    pct_h1 = min(100,(p_h1*100)/(p_h1+p_h2))
+    #print(pct_h1)
     for i in range(int(pct_h1)):
         pd[i] = True
         
@@ -339,7 +340,8 @@ def gibbs(bounds):
     boundD = apply_bounds(bounds)
     if save:
         output = [' '.join(s) for s in boundD]
-        with open('output_test','w') as out:
+        s = format('output_test_allData_alpha%s'%a)
+        with open(s,'w') as out:
             out.write('\n'.join(output))
 
     # calculate evaluation metrics
