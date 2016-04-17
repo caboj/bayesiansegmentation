@@ -41,7 +41,7 @@ def load_data():
             data = np.array([np.array( (f.readline().strip()).split(' ') ) for i in range(n)])
     trainD = np.array([np.array(list(''.join(s))) for s in data])
     n = len(trainD)
-    print('len data: ', n)
+    #print('len data: ', n)
 
     n_uf = n
     # initialize boundries between words
@@ -65,8 +65,7 @@ def define_p0():
     # a uniform distribution over chars
     p0[:] = 1.0/len(voc)
     # a distribution according to relative frequency
-    totalCs = len(np.hstack(trainC))
-    p0 = p0[:]/float(totalCs)
+    #totalCs = len(np.hstack(trainC))
 
 def define_trainC():
     global trainC
@@ -139,9 +138,9 @@ def precision(boundD):
     p = np.array([])
     for b, ut in zip(boundD, data):
         utb = extract_bounds(ut)
-        print(utb)
-        print(b)
-        print('')
+        #print(utb)
+        #print(b)
+        #print('')
         pb = sum(np.in1d(b, utb)) / float(len(utb))
         p = np.append(p, pb)
     return p
@@ -218,9 +217,9 @@ def gibbs(bounds):
     global save
     
     for e in range(epochs):
-        print('epoch', e)
+        #print('epoch', e, end='\r')
         utI = 0
-        
+        b_changes = 0
         for ni in range(n):
             #bndrs = bndrs.tolist()
             existing_b = False
@@ -237,6 +236,7 @@ def gibbs(bounds):
                     end_b = bndrs[end_b_idx]
                     h1 = test_h1_gr_h2(b0,cur_b,end_b,ut,False)
                     if h1:
+                        b_changes += 1
                         end_b_idx -= 1
                         #print('remove b, b_idx: ',cur_b,end_b_idx)
                         update_counts_remove(ut, end_b_idx, bndrs)
@@ -247,12 +247,15 @@ def gibbs(bounds):
                 else:
                     h1 = test_h1_gr_h2(b0,cur_b,end_b,ut,True)
                     if not h1:
+                        b_changes += 1
                         #print('insert b, b_idx: ', cur_b,end_b_idx)
                         update_counts_add(ut, end_b_idx, cur_b, bndrs)
                         bndrs.insert(end_b_idx,cur_b)
                         end_b_idx += 1
                         b0 = cur_b
             bounds[ni] = bndrs
+        print('boundaries canged: ', b_changes)
+            
 
                 
     boundD = apply_bounds(bounds)
